@@ -1,0 +1,287 @@
+import * as THREE from "three";
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x222222);
+
+const camera = new THREE.PerspectiveCamera(
+    75,
+    window.innerWidth / window.innerHeight,
+    0.1,
+    1000
+);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+const startPage = document.getElementById("startPage");
+const startBtn = document.getElementById("startBtn");
+const endPage = document.getElementById("endPage");
+const restartBtn = document.getElementById("restartBtn");
+
+const scoreboard = document.getElementById("scoreboard");
+const scoreText = document.getElementById("score");
+const livesText = document.getElementById("lives");
+const controls = document.getElementById("controls");
+const finalScore = document.getElementById("finalScore");
+
+
+let score = 0;
+let lives = 3;
+let gameStarted = false;
+let gameOver = false;
+let hitCooldown = 0;
+
+const speed = 5;
+let previousTime = 0;
+
+const groundGeometry = new THREE.PlaneGeometry(30, 30);
+
+const groundMaterial = new THREE.MeshBasicMaterial({
+    color: 0x228b22,
+    side: THREE.DoubleSide
+});
+
+const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+
+ground.rotation.x = -Math.PI / 2;
+scene.add(ground);
+
+const playerGeometry = new THREE.BoxGeometry(1, 2, 1);
+
+const playerMaterial = new THREE.MeshBasicMaterial({
+    color: 0x3366ff
+});
+
+const player = new THREE.Mesh(playerGeometry, playerMaterial);
+
+player.position.set(0, 1, 0);
+scene.add(player);
+
+const zombies = [];
+
+function createZombie(x, z) {
+    const zombie = new THREE.Group();
+    const bodyGeometry = new THREE.BoxGeometry(1, 1.4, 0.6);
+    const bodyMaterial = new THREE.MeshBasicMaterial({
+        color: 0x66aa33
+    });
+
+    const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+    body.position.y = 0.7;
+    zombie.add(body);
+
+    const headGeometry = new THREE.SphereGeometry(0.35, 16, 16);
+    const headMaterial = new THREE.MeshBasicMaterial({
+        color: 0x99cc66
+    });
+
+    const head = new THREE.Mesh(headGeometry, headMaterial);
+    head.position.y = 1.65;
+    zombie.add(head);
+
+    zombie.position.set(x, 0, z);
+    scene.add(zombie);
+
+    zombies.push({
+        mesh: zombie,
+        direction: 1,
+        speed: 2,
+        min: x - 3,
+        max: x + 3,
+        alive: true
+    });
+}
+
+createZombie(-8, -3);
+createZombie(0, -6);
+createZombie(8, -3);
+createZombie(-5, 5);
+createZombie(5, 5);
+
+const keys = {
+    w: false,
+    s: false,
+    a: false,
+    d: false
+};
+
+window.addEventListener("keydown", function (event) {
+    const key = event.key.toLowerCase();
+
+    if (key in keys) {
+        keys[key] = true;
+    }
+
+    // Shoot with SPACE
+    if (event.code === "Space" && gameStarted && !gameOver) {
+        shootZombie();
+        event.preventDefault();
+    }
+});
+
+window.addEventListener("keyup", function (event) {
+    const key = event.key.toLowerCase();
+
+    if (key in keys) {
+        keys[key] = false;
+    }
+});
+
+
+function isNear(object, distanceLimit) {
+    const dx = player.position.x - object.position.x;
+    const dz = player.position.z - object.position.z;
+
+    const distance = Math.sqrt(dx * dx + dz * dz);
+
+    return distance < distanceLimit;
+}
+
+
+
+
+function shootZombie() {
+    let nearestZombie = null;
+    let nearestDistance = Infinity;
+
+    for (const z of zombies) {
+        if (!z.alive) continue;
+
+        const dx = player.position.x - z.mesh.position.x;
+        const dz = player.position.z - z.mesh.position.z;
+
+        const distance = Math.sqrt(dx * dx + dz * dz);
+
+        if (distance < nearestDistance) {
+            nearestDistance = distance;
+            nearestZombie = z;
+        }
+    }
+
+    
+    if (nearestZombie && nearestDistance < 8) {
+        nearestZombie.alive = false;
+        scene.remove(nearestZombie.mesh);
+
+        score++;
+        updateInfo();
+    }
+}
+
+
+function updateInfo() {
+    scoreText.innerHTML = "Score: " + score;
+    livesText.innerHTML = "Lives: " + lives;
+}
+
+
+function endGame() {
+    gameOver = true;
+
+    endPage.style.display = "block";
+    finalScore.innerHTML = "Your Score: " + score;
+}
+
+function startGame() {
+    score = 0;
+    lives = 3;
+    hitCooldown = 0;
+    previousTime = 0;
+
+    gameStarted = true;
+    gameOver = false;
+
+    player.position.set(0, 1, 0);
+
+    for (const z of zombies) {
+        z.alive = true;
+        scene.add(z.mesh);
+        z.mesh.position.x = z.min + 3;
+        z.direction = 1;
+    }
+
+    startPage.style.display = "none";
+    endPage.style.display = "none";
+    scoreboard.style.display = "block";
+    controls.style.display = "block";
+
+    updateInfo();
+}
+
+startBtn.onclick = startGame;
+restartBtn.onclick = startGame;
+
+camera.position.set(0, 12, 16);
+camera.lookAt(0, 0, 0);
+
+function animate(time) {
+    const dt = Math.min((time - previousTime) / 1000, 0.05);
+    previousTime = time;
+
+    
+    if (!gameStarted || gameOver) {
+        renderer.render(scene, camera);
+        return;
+    }
+
+    
+    const oldX = player.position.x;
+    const oldZ = player.position.z;
+
+  
+    if (keys.w) player.position.z -= speed * dt;
+    if (keys.s) player.position.z += speed * dt;
+    if (keys.a) player.position.x -= speed * dt;
+    if (keys.d) player.position.x += speed * dt;
+
+  
+    player.position.x = Math.max(-14, Math.min(14, player.position.x));
+    player.position.z = Math.max(-14, Math.min(14, player.position.z));
+
+    
+    for (const z of zombies) {
+        if (!z.alive) continue;
+
+        z.mesh.position.x += z.direction * z.speed * dt;
+
+        if (z.mesh.position.x >= z.max) {
+            z.mesh.position.x = z.max;
+            z.direction = -1;
+        }
+
+        if (z.mesh.position.x <= z.min) {
+            z.mesh.position.x = z.min;
+            z.direction = 1;
+        }
+    }
+
+    
+    hitCooldown = Math.max(0, hitCooldown - dt);
+
+    for (const z of zombies) {
+        if (z.alive && isNear(z.mesh.position, 1.5)) {
+            if (hitCooldown === 0) {
+                lives--;
+                hitCooldown = 1;
+                updateInfo();
+            }
+
+          
+            player.position.x = oldX;
+            player.position.z = oldZ;
+
+            break;
+        }
+}
+    if (lives <= 0) {
+        endGame();
+    }
+
+    renderer.render(scene, camera);
+}
+
+
+renderer.setAnimationLoop(animate);
+
+
