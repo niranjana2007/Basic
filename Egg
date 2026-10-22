@@ -1,0 +1,330 @@
+
+import * as THREE from "three";
+
+// 1. SCENE, CAMERA AND RENDERER
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x87ceeb);
+
+const camera = new THREE.PerspectiveCamera(
+    75,
+    window.innerWidth / window.innerHeight,
+    0.1,
+    1000
+);
+
+camera.position.set(0, 12, 18);
+camera.lookAt(0, 4, 0);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+
+// 2. HTML ELEMENTS
+
+const startPage = document.getElementById("startPage");
+const startBtn = document.getElementById("startBtn");
+const endPage = document.getElementById("endPage");
+const restartBtn = document.getElementById("restartBtn");
+
+const scoreboard = document.getElementById("scoreboard");
+const scoreText = document.getElementById("score");
+const livesText = document.getElementById("lives");
+const controls = document.getElementById("controls");
+const finalScore = document.getElementById("finalScore");
+
+
+// 3. GAME VARIABLES
+
+let score = 0;
+let lives = 3;
+let gameStarted = false;
+let gameOver = false;
+
+const speed = 7;
+let previousTime = 0;
+
+
+// 4. PLAYING AREA
+
+const ground = new THREE.Mesh(
+    new THREE.PlaneGeometry(20, 20),
+    new THREE.MeshBasicMaterial({
+        color: 0x228b22,
+        side: THREE.DoubleSide
+    })
+);
+
+ground.rotation.x = -Math.PI / 2;
+ground.position.set(0, 0, 0);
+scene.add(ground);
+
+
+// 5. BASKET (PLAYER)
+
+const player = new THREE.Mesh(
+    new THREE.BoxGeometry(2, 0.5, 1.5),
+    new THREE.MeshBasicMaterial({ color: 0x8b4513 })
+);
+
+player.position.set(0, 0.5, 6);
+scene.add(player);
+
+
+// 6. OPPONENT
+
+const opponent = new THREE.Mesh(
+    new THREE.BoxGeometry(2, 1, 1),
+    new THREE.MeshBasicMaterial({ color: 0xff3333 })
+);
+
+opponent.position.set(0, 0.5, -6);
+scene.add(opponent);
+
+
+// 7. EGGS
+
+const eggs = [];
+
+function createEgg(x, y, color, size, speed, type) {
+    const egg = new THREE.Mesh(
+        new THREE.SphereGeometry(size, 16, 16),
+        new THREE.MeshBasicMaterial({ color: color })
+    );
+
+    egg.position.set(x, y, 0);
+    scene.add(egg);
+
+    eggs.push({
+        mesh: egg,
+        speed: speed,
+        type: type,
+        direction: 1,
+        startX: x,
+        startY: y,
+        startZ: 0,
+        size: size,
+        baseX: x,
+        active: true,
+        manipulated: false
+    });
+}
+
+createEgg(-6, 8, 0xff0000, 0.4, 3, "straight");
+createEgg(0, 10, 0xffff00, 0.6, 4, "zigzag");
+createEgg(6, 9, 0x0000ff, 0.3, 2, "horizontal");
+createEgg(-3, 12, 0x00ff00, 0.5, 5, "straight");
+
+
+// 8. KEYBOARD CONTROLS
+
+const keys = {
+    a: false,
+    d: false,
+    ArrowLeft: false,
+    ArrowRight: false
+};
+
+window.addEventListener("keydown", function (event) {
+    if (event.key in keys) {
+        keys[event.key] = true;
+    }
+});
+
+window.addEventListener("keyup", function (event) {
+    if (event.key in keys) {
+        keys[event.key] = false;
+    }
+});
+
+
+// 9. SCOREBOARD
+
+function updateInfo() {
+    scoreText.innerHTML = "Score: " + score;
+    livesText.innerHTML = "Lives: " + lives;
+}
+
+
+// 10. GAME OVER
+
+function endGame() {
+    gameOver = true;
+
+    endPage.style.display = "block";
+    finalScore.innerHTML = "Your Score: " + score;
+}
+
+
+// 11. OPPONENT MANIPULATION
+
+let opponentTimer = 0;
+
+function manipulateEgg() {
+    const activeEggs = eggs.filter(e => e.active);
+
+    if (activeEggs.length === 0) return;
+
+    const egg = activeEggs[
+        Math.floor(Math.random() * activeEggs.length)
+    ];
+
+    // Change its direction
+    egg.direction *= -1;
+
+    // Change its speed
+    egg.speed += 1;
+
+    egg.manipulated = true;
+}
+
+
+// 12. START AND RESTART
+
+function startGame() {
+    score = 0;
+    lives = 3;
+    gameStarted = true;
+    gameOver = false;
+    previousTime = 0;
+    opponentTimer = 0;
+
+    for (const egg of eggs) {
+        egg.mesh.position.set(
+            egg.startX,
+            egg.startY,
+            egg.startZ
+        );
+
+        egg.speed = egg.type === "straight" ? 3 : 4;
+        egg.direction = 1;
+        egg.active = true;
+        egg.manipulated = false;
+
+        scene.add(egg.mesh);
+    }
+
+    player.position.set(0, 0.5, 6);
+    opponent.position.set(0, 0.5, -6);
+
+    startPage.style.display = "none";
+    endPage.style.display = "none";
+    scoreboard.style.display = "block";
+    controls.style.display = "block";
+
+    updateInfo();
+}
+
+startBtn.onclick = startGame;
+restartBtn.onclick = startGame;
+
+
+// 13. ANIMATION LOOP
+
+function animate(time) {
+    const dt = Math.min((time - previousTime) / 1000, 0.05);
+    previousTime = time;
+
+    if (!gameStarted || gameOver) {
+        renderer.render(scene, camera);
+        return;
+    }
+
+    // Move basket left and right
+    if (keys.a || keys.ArrowLeft) {
+        player.position.x -= speed * dt;
+    }
+
+    if (keys.d || keys.ArrowRight) {
+        player.position.x += speed * dt;
+    }
+
+    player.position.x = Math.max(
+        -9,
+        Math.min(9, player.position.x)
+    );
+
+    // Opponent moves left and right
+    opponent.position.x = Math.sin(time / 1000) * 7;
+
+    // Opponent manipulates an egg every 3 seconds
+    opponentTimer += dt;
+
+    if (opponentTimer >= 3) {
+        manipulateEgg();
+        opponentTimer = 0;
+    }
+
+    // Update eggs
+    for (const e of eggs) {
+        if (!e.active) continue;
+
+        // Straight movement
+        if (e.type === "straight") {
+            e.mesh.position.y -= e.speed * dt;
+        }
+
+        // Zigzag movement
+        if (e.type === "zigzag") {
+            e.mesh.position.y -= e.speed * dt;
+            e.mesh.position.x += e.direction * e.speed * dt;
+
+            if (Math.abs(e.mesh.position.x - e.baseX) > 2) {
+                e.direction *= -1;
+            }
+        }
+
+        // Horizontal movement
+        if (e.type === "horizontal") {
+            e.mesh.position.x += e.direction * e.speed * dt;
+
+            if (e.mesh.position.x > 9 || e.mesh.position.x < -9) {
+                e.direction *= -1;
+            }
+
+            e.mesh.position.y -= e.speed * dt;
+        }
+
+        // Catch egg
+        const dx = Math.abs(e.mesh.position.x - player.position.x);
+        const dy = Math.abs(e.mesh.position.y - player.position.y);
+
+        if (dx < 1.5 && dy < 1) {
+            e.active = false;
+            scene.remove(e.mesh);
+
+            score++;
+            updateInfo();
+            continue;
+        }
+
+        // Missed egg
+        if (e.mesh.position.y < 0) {
+            e.active = false;
+            scene.remove(e.mesh);
+
+            lives--;
+            updateInfo();
+        }
+    }
+
+    // Game over
+    if (lives <= 0) {
+        endGame();
+    }
+
+    renderer.render(scene, camera);
+}
+
+renderer.setAnimationLoop(animate);
+
+
+// 14. WINDOW RESIZE
+
+window.addEventListener("resize", function () {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+
+    renderer.setSize(window.innerWidth, window.innerHeight);
+});
