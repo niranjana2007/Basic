@@ -1,0 +1,65 @@
+
+let velocityY = 0;
+let gravity = -20;
+let jumpPower = 8;
+let isJumping = false;
+let onPlatform = false;
+player.position.set(0, 1, 0);
+const platforms = [];
+
+function createPlatform(x, y, z) {
+    const geometry = new THREE.BoxGeometry(4, 0.5, 4);
+    const material = new THREE.MeshBasicMaterial({ color: 0x8b4513 });
+
+    const platform = new THREE.Mesh(geometry, material);
+    platform.position.set(x, y, z);
+
+    scene.add(platform);
+    platforms.push(platform);
+}
+
+createPlatform(0, 0, 0);
+createPlatform(3, 3, 0);
+createPlatform(6, 6, 0);
+if (event.code === "Space" && !isJumping) {
+    velocityY = jumpPower;
+    isJumping = true;
+}
+
+
+function animate(time) {
+    const dt = Math.min((time - previousTime) / 1000, 0.05);
+    previousTime = time;
+if (gameEnded) {
+        renderer.render(scene, camera);
+        return;
+    }
+
+velocityY -= 20 * dt;
+player.position.y += velocityY * dt;
+
+for (let p of platforms) {
+    if (
+        Math.abs(player.position.x - p.position.x) < 2 &&
+        Math.abs(player.position.z - p.position.z) < 2 &&
+        player.position.y <= p.position.y + 1.5 &&
+        velocityY < 0
+    ) {
+        player.position.y = p.position.y + 1.5;
+        velocityY = 0;
+        isJumping = false;
+    }
+}
+if (player.position.y < -5) {
+    lives--;
+    updateInfo();
+
+    player.position.set(0, 1, 0);
+    velocityY = 0;
+    isJumping = false;
+
+    if (lives <= 0) {
+        gameOver.style.display = "block";
+        return;
+    }
+}
