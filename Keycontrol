@@ -1,0 +1,38 @@
+basketball 
+
+document.addEventListener("keydown", function(event) {
+
+    if (!running) return;
+
+    if (event.code === "Space" && !moving) {
+        moving = true;
+        velocityY = 0.15;
+        velocityZ = -0.3;
+    }
+
+});
+
+wasd
+------
+
+
+const keys={};
+window.addEventListener('keydown',function(event){
+   keys[event.key]=true;
+});
+
+window.addEventListener('keyup',function(event){
+   keys[event.key]=false;
+});
+
+
+animate
+------
+
+const speed=0.5;
+  if(keys['ArrowLeft']) lion.position.x-=speed;
+  if(keys['ArrowRight'])lion.position.x+=speed;
+  if(keys['ArrowUp'])lion.position.y+=speed;
+if(keys['ArrowDown'])lion.position.y-=speed;
+
+
