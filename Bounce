@@ -1,0 +1,44 @@
+const ball = new THREE.Mesh(
+    new THREE.SphereGeometry(0.5, 32, 32),
+    new THREE.MeshStandardMaterial({ color: "orange" })
+);
+
+ball.position.y = 5;
+scene.add(ball);
+
+const ground = new THREE.Mesh(
+    new THREE.BoxGeometry(10, 0.5, 10),
+    new THREE.MeshStandardMaterial({ color: "green" })
+);
+
+ground.position.y = -0.5;
+scene.add(ground);
+let velocityY = 0;
+let gravity = 0.01;
+let bounce = 0.8;
+
+const ballBox = new THREE.Box3();
+const groundBox = new THREE.Box3();
+function animate() {
+
+    requestAnimationFrame(animate);
+
+    velocityY -= gravity;
+
+    ball.position.y += velocityY;
+
+    ballBox.setFromObject(ball);
+    groundBox.setFromObject(ground);
+
+    if (ballBox.intersectsBox(groundBox)) {
+
+        velocityY = -velocityY * bounce;
+
+        ball.position.y = 0.5;
+
+    }
+
+    renderer.render(scene, camera);
+}
+
+animate();
