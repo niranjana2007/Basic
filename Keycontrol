@@ -38,7 +38,59 @@ document.addEventListener("keydown", function(event) {
 
 });
 
+function animate() {
+    requestAnimationFrame(animate);
 
+    if (running && moving) {
+
+        ball.position.y += velocityY;
+        ball.position.z += velocityZ;
+
+        velocityY -= 0.005;
+
+        // Check basket
+        if (
+            ball.position.z < -5.5 &&
+            ball.position.z > -6.2 &&
+            ball.position.y > 2.5 &&
+            ball.position.y < 3.8
+        ) {
+            score++;
+            scoreText.innerText = score;
+            resetBall();
+        }
+
+        // Missed ball
+        if (ball.position.y < 0 || ball.position.z < -8) {
+
+            lives--;
+            livesText.innerText = lives;
+
+            if (lives <= 0) {
+                gameOver();
+            } else {
+                resetBall();
+            }
+        }
+    }
+
+    renderer.render(scene, camera);
+}
+function gameOver() {
+    running = false;
+    screen.style.display = "block";
+    title.innerText = "Game Over! Score: " + score;
+    start.innerText = "RESTART";
+}
+
+animate();
+
+// Resize
+window.addEventListener("resize", function() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+});
 
 wasd
 ------
