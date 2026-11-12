@@ -1,0 +1,241 @@
+import * as THREE from 'three';
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
+
+const renderer = new THREE.WebGLRenderer();
+renderer.setSize( window.innerWidth, window.innerHeight );
+renderer.setAnimationLoop( animate );
+document.body.appendChild( renderer.domElement );
+
+const geometry = new THREE.BoxGeometry( 0.5, 0.5, 0.5 );
+const material = new THREE.MeshBasicMaterial( { color: 0xffffff } );
+const cow = new THREE.Mesh( geometry, material );
+scene.add( cow );
+
+const geometry1 = new THREE.BoxGeometry( 0.5, 0.5, 0.5 );
+const material1 = new THREE.MeshBasicMaterial( { color: 0xffffff } );
+const cow1 = new THREE.Mesh( geometry1, material1 );
+scene.add( cow1 );
+
+const geometry2 = new THREE.BoxGeometry( 0.5, 0.5, 0.5 );
+const material2 = new THREE.MeshBasicMaterial( { color: 0xffffff } );
+const cow2 = new THREE.Mesh( geometry2, material2 );
+scene.add(cow2);
+
+camera.position.z = 10;
+
+cow.position.set(-5,0,0);
+cow1.position.set(0,0,0);
+cow2.position.set(5,0,0);
+
+
+//shape of the gun
+
+const radius =  0.6;  
+
+const geometry3 = new THREE.DodecahedronGeometry( radius );
+const material3 = new THREE.MeshBasicMaterial( { color: 0x0000ff } );
+const palyer = new THREE.Mesh( geometry3, material3 );
+scene.add(palyer);
+palyer.position.set(0,0,5);//z axis
+
+
+const bullets=[];
+
+
+function shoot(){
+
+const radius1 =  0.24;  
+const detail1 = 1;  
+const geometry4 = new THREE.IcosahedronGeometry( radius1, detail1 );
+const material4 = new THREE.MeshBasicMaterial( { color: 'red' } );
+const bullet = new THREE.Mesh( geometry4, material4 );
+
+bullet.position.copy(palyer.position);
+
+scene.add(bullet);
+bullets.push(bullet);
+
+
+
+}
+
+function reset(){
+
+
+cow.position.set(-5,0,0);
+cow1.position.set(0,0,0);
+cow2.position.set(5,0,0);
+scene.add(cow);
+scene.add(cow1);
+scene.add(cow2);
+palyer.position.set(0,0,5);
+
+
+}
+
+
+
+const st=document.getElementById("st");
+st.addEventListener("click",shoot);
+
+const re=document.getElementById("re");
+re.addEventListener("click",reset);
+
+
+
+
+const keys={}
+
+window.addEventListener('keydown',function(event){
+
+  keys[event.key]=true;
+
+  if(event.code==="Space")
+  {
+
+    event.preventDefault();
+    shoot();
+  }
+});
+
+window.addEventListener('keyup',function(event){
+
+  keys[event.key]=false;
+
+
+});
+
+
+
+const cowbox = new THREE.Box3();
+const cow1box = new THREE.Box3();
+const cow2box = new THREE.Box3();
+
+
+
+
+function animate( time ) {
+
+
+
+const speed=0.05;
+if(keys['ArrowLeft'])palyer.position.x-=speed;
+if(keys['ArrowRight'])palyer.position.x+=speed;
+if(keys['ArrowUp'])palyer.position.z-=speed;
+if(keys['ArrowDown'])palyer.position.z+=speed;
+
+
+cowbox.setFromObject(cow);
+cow1box.setFromObject(cow1);
+cow2box.setFromObject(cow2);
+
+
+
+
+  for(let i=bullets.length-1;i>=0;i--)
+  {
+
+    const bullet=bullets[i];
+    bullet.position.z-=0.3;
+
+
+    //inside the this loop we need to create the box and set object bcz bullet is made inside the function so it
+    // local variable which can be accessed only inside tht function there is no scope for it 
+    //so we create box here bcz we can accese it 
+    
+    const bulletbox = new THREE.Box3();
+    bulletbox.setFromObject(bullet);
+
+    if(bulletbox.intersectsBox(cowbox))
+    {
+      scene.remove(bullet);
+      scene.remove(cow);
+
+      bullets.splice(i,1);  
+
+
+    }
+   
+    if(bulletbox.intersectsBox(cow1box))
+    {
+
+      scene.remove(bullet);
+      scene.remove(cow1);
+      bullets.splice(i,1);
+
+
+    }
+
+    if(bulletbox.intersectsBox(cow2box))
+    {
+      scene.remove(bullet);
+      scene.remove(cow2);
+      bullets.splice(i,1);
+
+    }
+
+
+
+
+     else if(bullet.position.z<palyer.position.z-20)
+    {
+      scene.remove(bullet);
+      bullets.splice(i,1)
+    }
+
+
+
+
+
+
+
+
+
+
+
+  }
+
+
+
+
+  renderer.render( scene, camera );
+
+}
+  // CHECK GAME OVER
+if (!scene.children.includes(cow) &&
+    !scene.children.includes(cow1) &&
+    !scene.children.includes(cow2)) {
+
+    alert("GAME OVER! You killed all the cows!");
+
+}
+
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>My first three.js app</title>
+    <style>
+      body { background-color: aqua; }
+
+
+
+    </style>
+  </head>
+  <body>
+     <button id='bid'>start</button>
+    <script type="module" >
+
+        document.getElementById('bid').onclick=function(){
+            this.style.display='none';
+            import('/main.js');
+        }
+    </script>
+    <button id="st">Shoot</button>
+    <button id="re">Reset</button>
+  </body>
+</html>
+
