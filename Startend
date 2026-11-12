@@ -1,0 +1,97 @@
+<body>
+    <button id='bid'>start</button>
+    <script type="module" >
+
+        document.getElementById('bid').onclick=function(){
+            this.style.display='none';
+            import('/main.js');
+        }
+    </script>
+  </body>
+
+______
+main
+-----
+
+
+let s=0;
+const scoreText=document.createElement('div');
+scoreText.innerText='Score:0';
+scoreText.style.cssText='position:absolute;top:10px;left:10px;font-size:30px;color:white;font-family:Arial';
+document.body.appendChild(scoreText);
+
+
+
+
+let lives=3;
+const heartText=document.createElement('div');
+heartText.innerText='❤️❤️❤️';
+heartText.style.cssText='position:absolute;top:10px;right:10px;font-size:30px;';
+document.body.appendChild(heartText);
+
+const lionbox = new THREE.Box3();
+const foxbox = new THREE.Box3();
+const cowbox = new THREE.Box3();
+
+
+
+function animate( time ) {
+
+
+  fox.position.y-=0.5;  
+  lion.rotation.x = time / 2000;
+  lion.rotation.y = time / 1000;
+
+const speed=0.5;
+  if(keys['ArrowLeft']) lion.position.x-=speed;
+  if(keys['ArrowRight'])lion.position.x+=speed;
+  if(keys['ArrowUp'])lion.position.y+=speed;
+if(keys['ArrowDown'])lion.position.y-=speed;
+
+
+lionbox.setFromObject( lion ); 
+foxbox.setFromObject( fox ) ;
+cowbox.setFromObject( cow ); 
+
+
+if(lionbox.intersectsBox(cowbox))
+{
+   s++;
+   scoreText.innerText='Score: '+s;
+
+   cow.position.x=THREE.MathUtils.randFloat(-5,5);
+cow.position.y=THREE.MathUtils.randFloat(-5,5);
+
+
+
+}
+
+if(lionbox.intersectsBox(foxbox))
+{
+
+  lives=lives-1;
+  heartText.innerText='❤️'.repeat(lives);
+  
+fox.position.x=THREE.MathUtils.randFloat(-10,10);
+fox.position.y=THREE.MathUtils.randFloat(-10,10);
+
+if(lives===0)
+{
+    alert('game over,score:' +s);
+    renderer.setAnimationLoop(null);
+}
+
+
+}
+
+if(fox.position.y<-5)
+{
+fox.position.x=THREE.MathUtils.randFloat(-10,10);
+fox.position.y=THREE.MathUtils.randFloat(-10,10);
+
+}
+
+  renderer.render( scene, camera );
+
+}
+
