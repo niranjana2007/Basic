@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>My first three.js app</title>
+    <style>
+      body {
+        margin: 0;
+      }
+    </style>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    
+    <div id="startPage" class="screen">
+        <h1>Shepherd's Quest</h1>
+        <p>Collect hints from all 3 shops.</p>
+        <p>Avoid getting too close to people!</p>
+        <p>Use W, A, S, D to move.</p>
+        <button id="startBtn">START GAME</button>
+    </div>
+
+    <!-- Scoreboard -->
+    <div id="info">
+        Score: 0 | Lives: 3
+    </div>
+
+    <!-- Game over screen -->
+    <div id="gameOver" class="screen">
+        <h1>GAME OVER</h1>
+        <p id="finalScore">Your score: 0</p>
+        <button id="restartBtn">PLAY AGAIN</button>
+    </div>
+    <script type="module" src="/main.js"></script>
+  </body>
+</html>
+
+
+import * as THREE from "three";
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(
+  75,
+  window.innerWidth / window.innerHeight,
+  0.1,
+  1000,
+);
+
+const renderer = new THREE.WebGLRenderer();
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setAnimationLoop(animate);
+document.body.appendChild(renderer.domElement);
+
+let gameStarted = false;
+const startPage = document.getElementById("startPage");
+const startBtn = document.getElementById("startBtn");
+
+const info = document.getElementById("info");
+const gameOver = document.getElementById("gameOver");
+const finalScore = document.getElementById("finalScore");
+
+startBtn.onclick = function () {
+    gameStarted = true;
+    startPage.style.display = "none";
+    info.style.display = "block";
+};
+let score = 0;
+let lives = 3;
+
+function updateInfo() {
+  info.innerHTML = "Score: " + score + " | Lives: " + lives;
+}
+
+updateInfo();
+
+const groundGeometry = new THREE.PlaneGeometry(30, 30);
+const groundMaterial = new THREE.MeshBasicMaterial({
+  color: 0x228b22,
+  side: THREE.DoubleSide,
+});
+const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+ground.rotation.x = -Math.PI / 2;
+ground.position.y = 0;
+scene.add(ground);
+
+const playerGeometry = new THREE.BoxGeometry(1, 2, 1);
+const playerMaterial = new THREE.MeshBasicMaterial({ color: 0xffaa00 });
+const player = new THREE.Mesh(playerGeometry, playerMaterial);
+player.position.set(0, 1, 0);
+scene.add(player);
+
+// const sheepGeometry = new THREE.BoxGeometry(1.5, 1, 1);
+// const sheepMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+// const sheep = new THREE.Mesh(sheepGeometry, sheepMaterial);
+// sheep.position.set(5, 0.5, 0);
+// scene.add(sheep);
+
+// let sheepDirection=1;
+// const sheepSpeed=2;
+// const sheepMin=3;
+// const sheepMax=10;
+const sArray = [];
+function createSheep(x, z) {
+  const sheepGeometry = new THREE.BoxGeometry(1.5, 1, 1);
+  const sheepMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  const sheep = new THREE.Mesh(sheepGeometry, sheepMaterial);
+  sheep.position.set(x, 0.5, z);
+  scene.add(sheep);
+  sArray.push({ mesh: sheep, direction: 1, speed: 2, min: 3, max: 10 });
+}
+createSheep(5, 0);
+createSheep(5, 3);
+createSheep(5, -3);
+createSheep(5, 6);
+createSheep(5, -6);
+
+const people = [];
+function createPeople(x, z) {
+  const person = new THREE.Group();
+  const bodyGeometry = new THREE.BoxGeometry(0.7, 1.2, 0.4);
+  const bodyMaterial = new THREE.MeshBasicMaterial({ color: 0x3366ff });
+  const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+  body.position.y = 0.6;
+  person.add(body);
+  const headGeometry = new THREE.SphereGeometry(0.25, 16, 16);
+  const headMaterial = new THREE.MeshBasicMaterial({ color: 0xffcc99 });
+  const head = new THREE.Mesh(headGeometry, headMaterial);
+  head.position.y = 1.4;
+  person.add(head);
+  person.position.set(x, 0, z);
+  scene.add(person);
+  people.push(person);
+}
+
+createPeople(-5, 2);
+createPeople(-2, -4);
+createPeople(2, 5);
+createPeople(7, -3);
+createPeople(-8, -6);
+createPeople(10, 4);
+
+const shops = [];
+function createShop(x, z, color) {
+  const geometry = new THREE.BoxGeometry(2, 1.5, 2);
+  const material = new THREE.MeshBasicMaterial({ color: color });
+
+  const shop = new THREE.Mesh(geometry, material);
+  shop.position.set(x, 0.75, z);
+  scene.add(shop);
+  shops.push({ mesh: shop, collected: false });
+}
+createShop(-10, 8, 0xff0000);
+createShop(0, -10, 0xffff00);
+createShop(10, 8, 0x0000ff);
+
+const keys = { w: false, s: false, a: false, d: false };
+window.addEventListener("keydown", (event) => {
+  if (event.key in keys) {
+    keys[event.key] = true;
+  }
+});
+window.addEventListener("keyup", (event) => {
+  if (event.key in keys) {
+    keys[event.key] = false;
+  }
+});
+
+function isNear(person) {
+  const dx = player.position.x - person.position.x;
+  const dz = player.position.z - person.position.z;
+
+  const distance = Math.sqrt(dx * dx + dz * dz);
+
+  return distance < 1.5;
+}
+
+camera.position.set(0, 10, 12);
+camera.lookAt(0, 0, 0);
+
+const speed = 5;
+let previousTime = 0;
+let hitCooldown = 0;
+
+function animate(time) {
+  let oldx = player.position.x;
+  let oldz = player.position.z;
+  const dt = Math.min((time - previousTime) / 1000, 0.05);
+  previousTime = time;
+  
+if (!gameStarted || lives <= 0) {
+    renderer.render(scene, camera);
+    return;
+}
+
+  if (keys.w) {
+    player.position.z -= speed * dt;
+  }
+  if (keys.s) {
+    player.position.z += speed * dt;
+  }
+  if (keys.a) {
+    player.position.x -= speed * dt;
+  }
+  if (keys.d) {
+    player.position.x += speed * dt;
+  }
+  player.position.x = Math.max(-14.5, Math.min(14.5, player.position.x));
+  player.position.z = Math.max(-14.5, Math.min(14.5, player.position.z));
+  for (let s of sArray) {
+    s.mesh.position.x += s.direction * s.speed * dt;
+    if (s.mesh.position.x >= s.max) {
+      s.mesh.position.x = s.max;
+      s.direction = -1;
+    }
+    if (s.mesh.position.x <= s.min) {
+      s.mesh.position.x = s.min;
+      s.direction = 1;
+    }
+  }
+  hitCooldown = Math.max(0, hitCooldown - dt);
+  for (let p of people) {
+    if (isNear(p)) {
+      if (hitCooldown === 0 && lives > 0) {
+        lives--;
+        hitCooldown = 1;
+        updateInfo();
+      }
+
+      player.position.x = oldx;
+      player.position.z = oldz;
+      break;
+    }
+  }
+
+  for (let s of shops) {
+    if (!s.collected && player.position.distanceTo(s.mesh.position) < 2) {
+      s.collected = true;
+      score++;
+      updateInfo();
+    }
+  }
+
+  
+if (lives <= 0) {
+    gameOver.style.display = "flex";
+    finalScore.textContent = "Your score: " + score;
+    renderer.render(scene, camera);
+    return;
+}
+
+document.getElementById("restartBtn").onclick = function () {
+    window.location.reload();
+};
+  renderer.render(scene, camera);
+}
+
+
+
+
+body {
+    margin: 0;
+    overflow: hidden;
+    font-family: Arial, sans-serif;
+}
+
+canvas {
+    display: block;
+}
+
+/* Start and end screens */
+.screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+
+    background: #173b24;
+    color: white;
+    text-align: center;
+    z-index: 10;
+}
+
+.screen h1 {
+    font-size: 42px;
+}
+
+.screen p {
+    font-size: 18px;
+}
+
+button {
+    padding: 12px 28px;
+    margin-top: 15px;
+    border: none;
+    border-radius: 8px;
+    background: #f5b942;
+    color: #173b24;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #ffd477;
+}
+
+/* Scoreboard */
+#info {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    color: white;
+    font-size: 24px;
+    z-index: 5;
+    display: none;
+}
+
+/* Hidden until the game ends */
+#gameOver {
+    display: none;
+}
