@@ -1,20 +1,5 @@
-basketball 
-
-document.addEventListener("keydown", function(event) {
-
-    if (!running) return;
-
-    if (event.code === "Space" && !moving) {
-        moving = true;
-        velocityY = 0.15;
-        velocityZ = -0.3;
-    }
-
-});
-
-wasd
-------
-
+arrow
+-----
 
 const keys={};
 window.addEventListener('keydown',function(event){
@@ -34,5 +19,57 @@ const speed=0.5;
   if(keys['ArrowRight'])lion.position.x+=speed;
   if(keys['ArrowUp'])lion.position.y+=speed;
 if(keys['ArrowDown'])lion.position.y-=speed;
+
+_________________________________
+
+
+basketball 
+----------
+
+document.addEventListener("keydown", function(event) {
+
+    if (!running) return;
+
+    if (event.code === "Space" && !moving) {
+        moving = true;
+        velocityY = 0.15;
+        velocityZ = -0.3;
+    }
+
+});
+
+
+
+wasd
+------
+const keys = { w: false, s: false, a: false, d: false };
+window.addEventListener("keydown", (event) => {
+  if (event.key in keys) {
+    keys[event.key] = true;
+  }
+});
+window.addEventListener("keyup", (event) => {
+  if (event.key in keys) {
+    keys[event.key] = false;
+  }
+});
+
+
+
+  if (keys.w) {
+    player.position.z -= speed * dt;
+  }
+  if (keys.s) {
+    player.position.z += speed * dt;
+  }
+  if (keys.a) {
+    player.position.x -= speed * dt;
+  }
+  if (keys.d) {
+    player.position.x += speed * dt;
+  }
+  player.position.x = Math.max(-14.5, Math.min(14.5, player.position.x));
+  player.position.z = Math.max(-14.5, Math.min(14.5, player.position.z));
+
 
 
